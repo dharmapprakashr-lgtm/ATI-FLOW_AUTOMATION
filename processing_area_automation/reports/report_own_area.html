@@ -1,0 +1,131 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Own Test Area — Full Suite Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; color: #222; }
+        .meta { color: #666; margin-bottom: 16px; }
+        .summary { display: flex; gap: 16px; margin-bottom: 20px; }
+        .summary div { padding: 10px 18px; border-radius: 6px; font-weight: bold; }
+        .summary .total { background: #eee; }
+        .summary .passed { background: #d4edda; color: #155724; }
+        .summary .failed { background: #f8d7da; color: #721c24; }
+        .summary .skipped { background: #fff3cd; color: #856404; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; font-size: 14px; }
+        th { background: #008080; color: white; }
+        tr.pass .status { color: #155724; font-weight: bold; }
+        tr.fail .status { color: #721c24; font-weight: bold; }
+        tr.fail { background: #fdecea; }
+        tr.skip .status { color: #856404; font-weight: bold; }
+        tr.skip { background: #fffaf0; }
+        .error { font-family: monospace; font-size: 12px; color: #721c24; max-width: 400px; }
+    </style></head><body>
+    <h1>Own Test Area — Full Suite Report</h1>
+    <div class="meta">Run at 2026-08-11 18:04:49 — area: AutoTest_35045 — target: https://192.168.6.32</div>
+    <div class="summary">
+        <div class="total">Total: 20</div>
+        <div class="passed">Passed: 15</div>
+        <div class="failed">Failed: 1</div>
+        <div class="skipped">Skipped: 4</div>
+    </div>
+    <table><tr><th>ID</th><th>Name</th><th>Status</th><th>Duration</th><th>Error</th><th>Screenshot</th></tr>
+    
+        <tr class="fail">
+            <td>SETUP_add_material</td><td>add material</td>
+            <td class="status">FAIL</td><td>0.0s</td>
+            <td class="error">RuntimeError: Add Material modal did not close after submit — check the failure screenshot for the actual on-screen validation message.</td><td><a href="screenshots/own_area_setup_add_material.png" target="_blank">screenshot</a></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_018</td><td>Add new container (full save)</td>
+            <td class="status">PASS</td><td>2.1s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_018b</td><td>Add Container modal opens with confirmed fields</td>
+            <td class="status">PASS</td><td>2.1s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_019</td><td>Validation on missing mandatory fields</td>
+            <td class="status">PASS</td><td>0.9s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_018_TROLLEY</td><td>Add container — type Trolley (randomized values)</td>
+            <td class="status">PASS</td><td>1.9s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_018_PALLET</td><td>Add container — type Pallet (randomized values)</td>
+            <td class="status">PASS</td><td>2.4s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_018_BIN</td><td>Add container — type Bin (randomized values)</td>
+            <td class="status">PASS</td><td>4.0s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="skip">
+            <td>TC_PA_017</td><td>Table displays correct columns/data</td>
+            <td class="status">SKIP</td><td>0.0s</td>
+            <td class="error">table row selector unconfirmed</td><td></td>
+        </tr>
+        <tr class="skip">
+            <td>TC_PA_020</td><td>Export CSV</td>
+            <td class="status">SKIP</td><td>0.0s</td>
+            <td class="error">export button interaction not yet captured in a recording</td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_001</td><td>Card displays correct details</td>
+            <td class="status">PASS</td><td>0.1s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="skip">
+            <td>TC_PA_002</td><td>Active/Inactive border indicator</td>
+            <td class="status">SKIP</td><td>0.0s</td>
+            <td class="error">spec mismatch — needs dev/product clarification</td><td></td>
+        </tr>
+        <tr class="skip">
+            <td>TC_PA_003</td><td>Filter tabs scope correctly</td>
+            <td class="status">SKIP</td><td>0.0s</td>
+            <td class="error">spec mismatch — no All/Active/Inactive filter found in build</td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_004</td><td>Card click navigates to grid view</td>
+            <td class="status">PASS</td><td>0.2s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_006</td><td>View mode is read-only (fills cell 0 first)</td>
+            <td class="status">PASS</td><td>2.6s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_007</td><td>Manage mode allows interaction</td>
+            <td class="status">PASS</td><td>0.5s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_008</td><td>Fill Available cell with Material</td>
+            <td class="status">PASS</td><td>1.4s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_009</td><td>Trolley option skipped for Yokohama Dahej</td>
+            <td class="status">PASS</td><td>0.7s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_010</td><td>Block cell</td>
+            <td class="status">PASS</td><td>1.1s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_011</td><td>Unblock cell</td>
+            <td class="status">PASS</td><td>1.0s</td>
+            <td class="error"></td><td></td>
+        </tr>
+        <tr class="pass">
+            <td>TC_PA_013</td><td>View filled cell details</td>
+            <td class="status">PASS</td><td>0.4s</td>
+            <td class="error"></td><td></td>
+        </tr></table></body></html>
