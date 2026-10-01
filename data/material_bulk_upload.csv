@@ -1,0 +1,4 @@
+production_unit,prefix_associated,material_type_name,process_name,quarantine_time,staging_area,max_quantity
+MFG3_10CFE,BULKA,bulk_upload_row_1,test_9707,2,false,10
+MFG3_10CFE,BULKB,bulk_upload_row_2,test_9707,3,true,20
+MFG3_10CFE,BULKC,bulk_upload_row_3,test_9707,1,false,15

@@ -1,0 +1,7 @@
+# Non-secret defaults for the QA environment.
+# Secrets (ADMIN_USERNAME / ADMIN_PASSWORD / ...) belong in .env, never here.
+# BASE_URL in the environment overrides base_url below.
+base_url: ""
+headless: true
+default_timeout: 15000
+ignore_https_errors: true

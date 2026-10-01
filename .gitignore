@@ -1,0 +1,27 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Secrets and environment
+.env
+
+# All test output lives in one place
+reports/
+
+# Saved Playwright storage_state - regenerated every run, may contain tokens
+fixtures/auth_states/
+tests/fixtures/auth_states/
+
+# Virtualenvs
+venv/
+myvenv/
+.venv/
+
+# Local API bearer tokens
+.mts_token
+
+# Local assistant/tooling settings
+.claude/
+
+# Central Python bytecode cache
+.cache/

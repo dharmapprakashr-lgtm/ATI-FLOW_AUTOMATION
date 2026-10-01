@@ -1,0 +1,6 @@
+# Non-secret defaults for the staging environment.
+# Select with: TEST_ENV=staging pytest
+base_url: ""
+headless: true
+default_timeout: 20000
+ignore_https_errors: true

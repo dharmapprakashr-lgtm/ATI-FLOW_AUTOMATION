@@ -1,0 +1,103 @@
+name: UI Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  schedule:
+    # Nightly at 02:00 UTC - the only time the e2e job runs.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+env:
+  TEST_ENV: qa
+  HEADLESS: "true"
+
+jobs:
+  # Per-PR signal. Roles run as a matrix, but NOT in parallel against the same
+  # environment: every job seeds the same fixed entity names from
+  # config/test_data.toml, so concurrent jobs would delete each other's records.
+  # max-parallel: 1 is a correctness constraint, not a cost one. Lift it only
+  # after entity names are made unique per job (see utils/data_factory.py).
+  role-suites:
+    name: ${{ matrix.marker }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        marker: [admin, requester, dispatcher, supervisor]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run ${{ matrix.marker }} suite
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          MES_USERNAME: ${{ secrets.MES_USERNAME }}
+          MES_PASSWORD: ${{ secrets.MES_PASSWORD }}
+        run: pytest -m "${{ matrix.marker }}" --alluredir=allure-results
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ matrix.marker }}
+          path: |
+            reports/
+            allure-results/
+          retention-days: 14
+
+  # Cross-role chain. Slowest and most brittle, so it is nightly-only rather
+  # than per-PR.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run e2e suite
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          MES_USERNAME: ${{ secrets.MES_USERNAME }}
+          MES_PASSWORD: ${{ secrets.MES_PASSWORD }}
+        # e2e depends on the admin suite having built the chain in the same run.
+        run: pytest -m "admin or e2e" --alluredir=allure-results
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-e2e
+          path: |
+            reports/
+            allure-results/
+          retention-days: 30

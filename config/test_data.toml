@@ -1,0 +1,344 @@
+# ==============================================================================
+# AtiFlow — Master Test Data Configuration
+# Edit values here; tests pick them up automatically.
+# ==============================================================================
+
+
+# ── Processing Area ────────────────────────────────────────────────────────────
+[processing_area]
+name        = "test_9707"
+description = "for testing purpose"
+
+
+# ── Staging Area ───────────────────────────────────────────────────────────────
+[staging_area]
+name          = "AH_stage"
+bound_fleet   = "test"
+other_fleet   = "test_01"
+
+
+# ── Material ───────────────────────────────────────────────────────────────────
+[material]
+material_type_name = "Material_9707"
+production_unit    = "MFG3_10CFE"
+pre_proc_time      = 1
+max_qty            = 23
+prefix             = "DSW"
+
+
+# ── Container ──────────────────────────────────────────────────────────────────
+[container]
+container_type = "Trolley"
+sub_type       = "mini trolly"
+length         = 232
+width          = 22
+height         = 45
+hitch_length   = 150
+qty            = 1
+
+#CRUD operatioin for testing purpose
+[material_crud]
+material_type_name        = "crud_material_45"
+material_type_name_edited = "crud_material_45_edited"
+production_unit           = "MFG3_10CFE"
+pre_proc_time             = 1
+max_qty                   = 10
+prefix                    = "CRD"
+
+
+[container_crud]
+container_type        = "Pallet"
+sub_type              = "crud_trolly"
+sub_type_edited       = "crud_trolly_edited"
+length                = 100
+width                 = 50
+height                = 30
+hitch_length          = 100
+qty                   = 2
+
+
+# ── Machine Names ──────────────────────────────────────────────────────────────
+[machine_name]
+machine_name_prod = "production_machine_9707"
+machine_name_cons = "consuption_machine_9707"
+
+
+# ── Station Mapping ────────────────────────────────────────────────────────────
+[station_mapping]
+name       = "pick"
+name_2     = "drop"
+station_id   = "pick2_gg"
+station_id_2 = "auto2_gg"
+
+
+# ── Machine Name CRUD (lifecycle test — separate from shared baseline) ─────────
+[machine_name_crud]
+name        = "crud_machine_45"
+name_edited = "crud_machine_45_edited"
+type        = "production"
+
+
+# ── Station Mapping CRUD (lifecycle test — separate from shared baseline) ──────
+[station_mapping_crud]
+name        = "crud_pick"
+name_edited = "crud_pick_edited"
+station_id  = "sta_3_Green"
+
+
+# ── Workflows ─────────────────────────────────────────────────────────────────
+# Confirmation Mode toggles (one per station type row):
+#   point_station_mode / staging_area_mode: "Auto" or "Manual"
+# pickup_type / drop_type: "mapping" = Mapping-based, "static" = Static
+[[workflow]]
+name                = "order_material_manual_45"
+point_station_mode  = "Manual"
+staging_area_mode   = "Manual"
+pickup_type         = "mapping"
+pickup_station      = "pick"
+drop_type           = "mapping"
+drop_station        = "drop"
+
+[[workflow]]
+name                = "order_material_auto_45"
+point_station_mode  = "Auto"
+staging_area_mode   = "Auto"
+pickup_type         = "mapping"
+pickup_station      = "pick"
+drop_type           = "mapping"
+drop_station        = "drop"
+
+[[workflow]]
+name                = "stagingArea_to_any_station_45"
+point_station_mode  = "Manual"
+staging_area_mode   = "Manual"
+pickup_type         = "static"
+pickup_station      = "AH_stage"
+drop_type           = "static"
+drop_station        = "auto1_gg"
+
+[[workflow]]
+name                = "anyStation_to_StagingArea_45"
+point_station_mode  = "Manual"
+staging_area_mode   = "Manual"
+pickup_type         = "static"
+pickup_station      = "auto2_gg"
+drop_type           = "static"
+drop_station        = "AH_stage"
+
+
+# ── Execution Source Config ────────────────────────────────────────────────────
+[execution_source_config]
+tabs = ["Requester Device", "MES", "Dispatcher Device", "Supervisor Device"]
+
+
+# ── Devices ────────────────────────────────────────────────────────────────────
+# Cross-references:
+#   requester_bound_machines  → machine_name.machine_name_cons
+#   requester_bound_workflows → workflow.name
+#   *_staging_areas           → staging_area.name
+#   supervisor_processing_areas → processing_area.name
+[devices]
+
+# Requester
+requester_name                 = "requester_45"
+requester_id                   = "1000011"
+requester_pass                 = "123456"
+requester_bound_machines       = "consuption_machine_9707"
+requester_bound_workflows      = ["order_material_manual_45", "order_material_auto_45", "stagingArea_to_any_station_45", "anyStation_to_StagingArea_45"]
+requester_staging_areas        = "AH_stage"
+requester_update_pass          = "NewPass@2024"
+requester_update_bound_machines  = "consuption_machine_45"
+requester_update_bound_workflows = "order_material_manual_45"
+
+# Dispatchers
+dispatcher_name                = "dispatcher_45"
+dispatcher_id                  = "1000022"
+dispatcher_pass                = "123456"
+dispatcher_bound_stations      = ["auto2_gg", "auto1_gg", "pick2_gg","auto0_gg"]
+dispatcher_staging_areas       = "AH_stage"
+dispatcher_update_pass         = "NewPass@2024"
+dispatcher_update_bound_stations = "auto3_gg"
+
+# Supervisor
+supervisor_name                  = "supervisor_45"
+supervisor_id                    = "1000033"
+supervisor_pass                  = "12345"
+supervisor_staging_areas         = "AH_stage"
+supervisor_processing_areas      = "test_45"
+supervisor_update_pass           = "NewPass@2024"
+supervisor_update_processing_areas = "test_45"
+
+
+# ── MES Configuration ──────────────────────────────────────────────────────────
+[mes]
+machine_name = "production_machine_45"
+
+
+# ── Dashboard Role Data ────────────────────────────────────────────────────────
+[requester]
+sample_request_name = "Test_Request_01"
+priority            = "High"
+
+# Make New Request wizard — a real, live SKU with physical WIP inventory
+# behind it, confirmed live 2026-08-26 under this device's bound machine
+# (consuption_machine_45) + workflow (anyStation_to_StagingArea) context.
+# The suite's own throwaway [material] above has no real stock, so wizard
+# tests need a real target — this is it. zero_stock_sub_sku is a row under
+# the same SKU that always shows "0 Available", for the disabled-row case.
+[requester_request_material]
+sku_code            = "DGT15A0666-01"
+sku_description     = "DGT15A0666-01 Green Tire"
+sub_sku_code        = "DTE15A0666"
+sub_sku_description = "PTE15A0666,FB166,470/310"
+zero_stock_sub_sku  = "DILS0019"
+
+[dispatcher]
+zone = "Zone-A"
+
+
+# ── Dispatcher · Requests screen ─────────────────────────────────────────────────
+[dispatcher_requests]
+default_station      = "auto2_gg"
+alt_station          = "auto1_gg"
+empty_state_contains = "requests found"
+no_match_search      = "ZZZ_NO_MATCH_9999_QWERTY"
+
+
+[supervisor]
+report_name = "Daily_Report"
+
+
+# ── Supervisor dashboard (/stagingArea, /opsinventory, /auto-trips) ────────────
+# Drives tests/ui/supervisor/. The supervisor device (see [devices] above) is
+# bound to exactly ONE processing area and ONE staging area, so the "switch
+# between two areas" cases self-skip until it is rebound to 2+ in admin.
+#
+# Confirmed live 2026-09-07:
+#   • Sidebar Processing Area selector  #operator-sidebar-supervisor-area-select
+#     lists ONLY bound_processing_area(s) — options == ["test_45"].
+#   • Staging Area screen reuses the requester's card component; only the one
+#     bound staging area (AH_stage) shows as a card.
+#   • Staging Area detail = a colour-coded cell grid + legend
+#     (Available #009688, Reserved #FFB300 amber, Blocked #FF726A, Filled #4FC3F7).
+#     There is NO separate "Current Materials / Reserved qty / In Transit qty"
+#     numeric panel — those states ARE the coloured cells.
+#   • WIP Inventory (/opsinventory) is a READ-ONLY aggregated table
+#     (Material Type Name, Code, Production Unit, In Transit, Processed,
+#     Pre-processed, Requested, Total Qty, UOM) with only a Refresh button
+#     (#wip-refresh-btn) — no Add/Remove/Adjust surface, no live auto-push.
+#   • Notifications drawer (#operator-sidebar-notif-row) shows connectivity
+#     alerts only (FM/MES unreachable), a "Clear all" button, and NO
+#     Retry / Handle Manually / History controls.
+[supervisor_dashboard]
+bound_processing_area   = "test_45"
+bound_staging_area      = "AH_stage"
+staging_area_grid_size  = "1 x 4 cells"
+legend_states           = ["Available", "Reserved", "Blocked", "Filled"]
+reserved_colour         = "#FFB300"
+wip_columns             = ["Material Type Name", "Code", "Production Unit", "In Transit", "Processed", "Pre-processed", "Requested", "Total Qty", "UOM"]
+notification_titles     = ["FM Unreachable", "MES Unreachable"]
+mes_error_text          = "MES is unreachable. MES API is unreachable. Check network or MES service."
+
+
+# ==============================================================================
+# END-TO-END SUITE — isolated input data  ([e2e_*] tables)
+# ------------------------------------------------------------------------------
+# tests/ui/e2e/ builds its OWN Processing Area, workflow and device records so a
+# cross-role e2e run (which deletes-and-recreates its baseline every time) never
+# touches the `test_9707` / `requester_45` world the isolated role suites
+# (admin / requester / dispatcher / supervisor) depend on.
+#
+# Only names AtiFlow itself creates carry the `_e2e` suffix. Values that must
+# match real Fleet Manager / live-inventory records are shared verbatim with the
+# sections above and are NOT duplicated here:
+#   • station ids  pick2_gg / auto2_gg / auto1_gg / auto0_gg   → [station_mapping]
+#   • fleet        "test"                                       → [staging_area]
+#   • staging area "AH_stage"                                   → [staging_area]
+#   • live SKU     DGT15A0666-01 / DTE15A0666                   → [requester_request_material]
+#
+# Consumed by config/test_data.py (TestData.e2e_*), config/processing_area_data.py
+# (e2e_*_spec / e2e_workflow_specs), config/role_credentials.py
+# (e2e_*_credentials) and tests/ui/e2e/conftest.py (fixture overrides).
+# ==============================================================================
+
+[e2e_processing_area]
+name        = "test_e2e"
+description = "end-to-end suite — rebuilt from scratch every run"
+
+[e2e_material]
+material_type_name = "Material_e2e"
+production_unit    = "MFG3_10CFE"          # real production unit — shared
+pre_proc_time      = 1
+max_qty            = 23
+prefix             = "DSE"                 # distinct from [material] "DSW"
+
+[e2e_container]
+container_type = "Trolley"                 # fixed dropdown value — not a name
+sub_type       = "mini trolly e2e"
+length         = 232
+width          = 22
+height         = 45
+hitch_length   = 150
+qty            = 1
+
+[e2e_machine_name]
+machine_name_prod = "production_machine_e2e"
+machine_name_cons = "consuption_machine_e2e"
+
+[e2e_station_mapping]
+name         = "pick_e2e"                  # mapping label (AtiFlow-created)
+name_2       = "drop_e2e"
+station_id   = "auto2_gg"                  # real FM station — shared
+station_id_2 = "pick2_gg"                  # real FM station — shared
+
+[[e2e_workflow]]
+name                = "order_material_manual_e2e"
+point_station_mode  = "Manual"
+staging_area_mode   = "Manual"
+pickup_type         = "mapping"
+pickup_station      = "pick_e2e"
+drop_type           = "mapping"
+drop_station        = "drop_e2e"
+
+
+# Device records for the e2e run. IDs are in the 9-000-0xx band so they never
+# collide with the [devices] records (1-000-0xx) if both sets exist at once.
+[e2e_devices]
+requester_name            = "requester_e2e"
+requester_id              = "9000011"
+requester_pass            = "123456"
+requester_bound_machines  = "consuption_machine_e2e"
+requester_bound_workflows = "order_material_manual_e2e"
+requester_staging_areas   = "AH_stage"
+
+dispatcher_name           = "dispatcher_e2e"
+dispatcher_id             = "9000022"
+dispatcher_pass           = "123456"
+dispatcher_bound_stations = ["auto2_gg", "pick2_gg"]
+dispatcher_staging_areas  = "AH_stage"
+
+supervisor_name             = "supervisor_e2e"
+supervisor_id               = "9000033"
+supervisor_pass             = "12345"
+supervisor_staging_areas    = "AH_stage"
+supervisor_processing_areas = "test_e2e"
+
+# CRUD lifecycle data. Names below are prefixes; area/device tests append a
+# timestamp and run token. Shared [processing_area]/[devices] remain unchanged.
+[processing_area_crud]
+name_prefix = "crud_processing_area"
+renamed_prefix = "crud_processing_area_edited"
+absent_name_prefix = "crud_processing_area_absent"
+description = "CRUD lifecycle processing area"
+updated_description = "CRUD lifecycle updated processing area"
+
+[devices_crud]
+requester_name_prefix = "crud_requester"
+dispatcher_name_prefix = "crud_dispatcher"
+supervisor_name_prefix = "crud_supervisor"
+requester_id_prefix = "crud_REQ"
+dispatcher_id_prefix = "crud_DIS"
+supervisor_id_prefix = "crud_SUP"
+absent_name_prefix = "crud_device_absent"
+password = "Crud@123456"
+updated_password = "CrudUpdated@123456"

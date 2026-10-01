@@ -1,0 +1,19 @@
+playwright
+pytest
+pytest-playwright
+python-dotenv
+pytest-html
+allure-pytest
+
+# TOML parsing for test_data.toml. Python 3.11+ has tomllib in the stdlib;
+# config.py falls back to this package on 3.10 and below.
+tomli; python_version < "3.11"
+
+# Synchronous API tests
+httpx
+
+requests
+
+PyYAML
+
+reportlab

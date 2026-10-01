@@ -1,0 +1,4 @@
+containerType,containerSubType,length,width,height,hitch_length,units
+Trolley,bulk_container_row_1,120,40,30,80,2
+Pallet,bulk_container_row_2,100,100,15,10,5
+Bin,bulk_container_row_3,30,20,20,10,9
