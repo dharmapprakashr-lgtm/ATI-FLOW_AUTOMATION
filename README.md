@@ -358,10 +358,8 @@ API fixture cleanup still runs even when UI cleanup is disabled.
 ## Useful Documentation
 
 - `docs/TEST_COVERAGE.md` - detailed coverage matrix and current inventory.
-- `docs/PROJECT_STRUCTURE.md` - repository structure and maintenance notes.
 - `config/README.md` - environment and test-data configuration.
 - `docs/ATIFLOW_CONFIGURATION.md` - product configuration walkthrough.
-- `docs/DEMO_READINESS.md` - demo readiness notes.
 - `docs/WIP_INVENTORY_TEST_CASES.md` - deferred WIP inventory scenarios.
 - `docs/plan.md` - historical development context.
 

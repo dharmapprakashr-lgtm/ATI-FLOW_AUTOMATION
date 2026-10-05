@@ -49,20 +49,19 @@ approval of the current working tree or the newly added API/model coverage.
 | Folder | Collected cases | Scope |
 | --- | --- | --- |
 | `tests/api/` | 310 | 128 HTTP contract cases and 182 MTS model/mock cases |
-| `tests/common/` | 26 | Shared login, version, access, dashboards, security, NFR, and navigation |
-| `tests/ui/` | 147 | Admin, CRUD, requester, dispatcher, supervisor, and E2E |
+| `tests/ui/common/` | 26 | Shared login, version, access, dashboards, security, NFR, and navigation |
+| `tests/ui/` excluding `common/` | 147 | Admin, CRUD, requester, dispatcher, supervisor, and E2E |
 | **Total** | **483** | All current pytest cases |
 
 ```text
 tests/
 ├── api/       # 310 cases; all API scripts remain directly in this folder
-├── common/    # 26 shared browser cases
-└── ui/        # 147 role/feature browser cases
+└── ui/        # 173 browser cases, including ui/common shared checks
 ```
 
-The `ui` marker selects **173 browser cases** across `tests/ui/` and
-`tests/common/`. Running only `pytest tests/ui` selects **147**, not the common
-suite. Use `pytest tests/ui tests/common` or `pytest -m ui` for all browser tests.
+The `ui` marker selects **173 browser cases** across `tests/ui/`, including the
+shared checks in `tests/ui/common/`. Use `pytest tests/ui` or `pytest -m ui` for
+all browser tests.
 
 Runtime-skip counts inspect test bodies only. Fixtures and helpers can introduce
 additional skips or setup failures. Conditional cases are included in the
@@ -93,7 +92,7 @@ additional skips or setup failures. Conditional cases are included in the
 
 ## 4. Common Tests — Login, Access, Dashboards, Version, Security & Navigation
 
-**Path:** `tests/common/` · **7 test files** · **26 collected cases**
+**Path:** `tests/ui/common/` · **7 test files** · **26 collected cases**
 
 Shared browser checks retain the `ui` marker and use the root authentication,
 environment validation, cleanup, and ordering hooks. Their original relative
@@ -101,7 +100,7 @@ execution order is preserved; the folder move does not change their assertions.
 
 ### test_login.py
 
-**File:** [test_login.py](../tests/common/test_login.py) · **Collected cases:** 2
+**File:** [test_login.py](../tests/ui/common/test_login.py) · **Collected cases:** 2
 
 | ID | Function | Coverage / assertion intent | Cases | Status |
 | --- | --- | --- | --- | --- |
@@ -110,7 +109,7 @@ execution order is preserved; the folder move does not change their assertions.
 
 ### test_application_version.py
 
-**File:** [test_application_version.py](../tests/common/test_application_version.py) · **Collected cases:** 1
+**File:** [test_application_version.py](../tests/ui/common/test_application_version.py) · **Collected cases:** 1
 
 | ID | Function | Coverage / assertion intent | Cases | Status |
 | --- | --- | --- | --- | --- |
@@ -118,7 +117,7 @@ execution order is preserved; the folder move does not change their assertions.
 
 ### test_access_control.py
 
-**File:** [test_access_control.py](../tests/common/test_access_control.py) · **Collected cases:** 4
+**File:** [test_access_control.py](../tests/ui/common/test_access_control.py) · **Collected cases:** 4
 
 | ID | Function | Coverage / assertion intent | Cases | Status |
 | --- | --- | --- | --- | --- |
@@ -129,7 +128,7 @@ execution order is preserved; the folder move does not change their assertions.
 
 ### test_dashboard_common.py
 
-**File:** [test_dashboard_common.py](../tests/common/test_dashboard_common.py) · **Collected cases:** 3
+**File:** [test_dashboard_common.py](../tests/ui/common/test_dashboard_common.py) · **Collected cases:** 3
 
 | ID | Function | Coverage / assertion intent | Cases | Status |
 | --- | --- | --- | --- | --- |
@@ -139,7 +138,7 @@ execution order is preserved; the folder move does not change their assertions.
 
 ### test_security.py
 
-**File:** [test_security.py](../tests/common/test_security.py) · **Collected cases:** 2
+**File:** [test_security.py](../tests/ui/common/test_security.py) · **Collected cases:** 2
 
 | ID | Function | Coverage / assertion intent | Cases | Status |
 | --- | --- | --- | --- | --- |
@@ -148,7 +147,7 @@ execution order is preserved; the folder move does not change their assertions.
 
 ### test_nfr.py
 
-**File:** [test_nfr.py](../tests/common/test_nfr.py) · **Collected cases:** 1
+**File:** [test_nfr.py](../tests/ui/common/test_nfr.py) · **Collected cases:** 1
 
 | ID | Function | Coverage / assertion intent | Cases | Status |
 | --- | --- | --- | --- | --- |
@@ -156,7 +155,7 @@ execution order is preserved; the folder move does not change their assertions.
 
 ### test_ui_navigation.py
 
-**File:** [test_ui_navigation.py](../tests/common/test_ui_navigation.py) · **Collected cases:** 13
+**File:** [test_ui_navigation.py](../tests/ui/common/test_ui_navigation.py) · **Collected cases:** 13
 
 | ID | Function | Coverage / assertion intent | Cases | Status |
 | --- | --- | --- | --- | --- |
@@ -1298,7 +1297,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 The `tests/unit/` suite (13 cases) was removed at the user's request on
 2026-09-29. Runtime cleanup and wait helpers remain in use; their dedicated
-regression tests are no longer collected. `tests/api/`, `tests/ui/`, and `tests/common/`
+regression tests are no longer collected. `tests/api/` and `tests/ui/`
 remain as test suites.
 
 ---
@@ -1390,13 +1389,13 @@ pytest --collect-only --no-pdf
 pytest
 
 # All 173 browser cases (role-specific + shared)
-pytest tests/ui tests/common
+pytest tests/ui
 
 # Shared checks only: 26 cases
-pytest tests/common
+pytest tests/ui/common
 
 # Role/feature checks only: 147 cases
-pytest tests/ui
+pytest tests/ui/admin tests/ui/crud tests/ui/requester tests/ui/dispatcher tests/ui/supervisor tests/ui/e2e
 
 # Individual UI suites
 pytest tests/ui/admin/processing_area/
@@ -1416,7 +1415,7 @@ pytest tests/api -m api_model
 
 # Configuration and diagnostics
 TEST_ENV=staging pytest tests/ui/admin/processing_area/
-pytest tests/ui tests/common --headed -rs
+pytest tests/ui --headed -rs
 CLEANUP_TEST_DATA=0 pytest tests/ui/admin/processing_area/
 ```
 
@@ -1443,7 +1442,7 @@ central pytest report layout.
 
 | Date | Change |
 | --- | --- |
-| 2026-09-29 | Updated current layout to `tests/api/`, `tests/common/`, and `tests/ui/`; corrected folder counts, commands, and links. All 483 cases retain their original ordering after accounting for the common path change. |
+| 2026-09-29 | Updated current layout to `tests/api/` and `tests/ui/`, including shared checks under `tests/ui/common/`; corrected folder counts, commands, and links. All 483 cases retain their original ordering after accounting for the common path change. |
 | 2026-09-28 | Rebuilt coverage from current pytest collection: 496 items; 310 API-folder cases including 182 MTS model checks; 173 UI cases; 13 unit cases. Added current cleanup boundaries, report behavior, and conditional coverage. |
 | 2026-09-28 | Excluded four removed cases; reflected CRUD relocation and Settings/Notifications under Processing Area. Historical approvals and pass totals were not carried forward as current evidence. |
 | 2026-09-25 | User-provided reference layout used for section structure; its inventory and historical counts are superseded by this snapshot. |
@@ -1458,11 +1457,10 @@ placeholder and malformed MES repair utility. Collection was 496 cases at that p
 ### Unit suite removal — 2026-09-29
 
 Removed `tests/unit/` by request. After the common-suite move, the remaining
-**483 cases** are **147 UI + 26 common + 310 API**. Earlier unit-test results
+**483 cases** are **173 UI + 310 API**. Earlier unit-test results
 above are historical evidence.
 
 ### Common suite relocation — 2026-09-29
 
-Shared browser tests now live in `tests/common/`. Counts: **147 UI + 26 common
-+ 310 API = 483**. The common suite retains the `ui` marker and original execution
+Shared browser tests now live in `tests/ui/common/`. Counts: **173 UI + 310 API = 483**. The common suite retains the `ui` marker and original execution
 order, authentication, environment validation, and cleanup behavior.

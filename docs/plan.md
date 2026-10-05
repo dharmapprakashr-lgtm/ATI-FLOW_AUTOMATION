@@ -1,16 +1,25 @@
 > Historical design plan: paths and proposed helpers below may no longer exist.
 > See [current structure](../README.md#project-structure) for the active layout.
 
-Good breakdown — since your file structure is already .py-based, I'll assume pytest + Playwright (Python). Here's a full suite design that builds on your existing pages/ layer, covers the admin flow completely now, and leaves clean seams for requester/dispatcher/supervisor later.
+This archived plan describes an earlier proposed pytest + Playwright structure
+for the ATIFlow automation suite. It is kept for background only; the active
+repository layout and run commands are documented in the root README.
 
-Design principles driving the structure
-Tests never talk to Playwright directly — only to Page Objects. Your base_page.py already gives you that discipline; keep it strict.
-Setup should skip the UI where possible. Creating a requester/dispatcher/supervisor through the admin UI for every test that just needs "a supervisor to exist" is slow and flaky. Do it once via API (if one exists) or via a UI fixture that runs once per session/module and hands back credentials.
-Role is a first-class test dimension, not just a page-object grouping. Tests should be organized and markable by role so you can run pytest -m admin or pytest -m requester independently, and later wire that into CI as a matrix.
-Auth state is reused, not re-logged-in per test. Playwright's storage_state lets you log in once per role and reuse the session, which is the single biggest speed win in a multi-role suite like this.
-Config and secrets are environment-driven, never hardcoded — you'll have at minimum a QA and staging environment, each needing its own base URL and seed credentials.
-Full project structure
+## Design Principles
 
+- Tests should interact through Page Objects instead of calling Playwright
+  directly from test bodies.
+- Setup should use APIs where available. UI setup is acceptable when no API
+  exists, but should be isolated in fixtures and reused across tests.
+- Roles should remain first-class test dimensions so suites can be selected with
+  markers such as `admin`, `requester`, `dispatcher`, and `supervisor`.
+- Authentication state should be reused per role to avoid repeated login flows.
+- Configuration and secrets should come from environment-specific settings, not
+  hardcoded values.
+
+## Proposed Historical Structure
+
+```text
 automation-suite/
 ├── pages/                              # (your existing layer, unchanged)
 │   ├── __init__.py
@@ -89,10 +98,14 @@ automation-suite/
 ├── pytest.ini                          # markers, test paths, default options
 ├── requirements.txt
 └── README.md
-The key mechanism: auth reuse across roles
-This is what actually makes the admin → requester/dispatcher/supervisor chain sane. In tests/conftest.py:
+```
 
+## Key Mechanism: Auth Reuse Across Roles
 
+The original proposal used Playwright `storage_state` files so each role could
+log in once and share that authenticated state across the suite:
+
+```python
 # tests/conftest.py
 import pytest
 from playwright.sync_api import sync_playwright
@@ -125,12 +138,17 @@ def admin_page(browser, admin_state):
     page = context.new_page()
     yield page
     context.close()
-Every admin test just asks for admin_page and gets a pre-authenticated page with no login step per test.
+```
 
-Where requester/dispatcher/supervisor credentials come from
-tests/requester/conftest.py seeds its own role account by depending on the admin layer once per session, not once per test:
+Each admin test could request `admin_page` and receive a pre-authenticated page
+without repeating the login flow.
 
+## Role Credential Setup
 
+The requester, dispatcher, and supervisor suites were intended to seed their own
+role account through the admin layer once per session:
+
+```python
 # tests/requester/conftest.py
 import pytest
 from utils.data_factory import unique_username
@@ -155,10 +173,15 @@ def requester_page(browser, requester_state):
     page = context.new_page()
     yield page
     context.close()
-This is exactly your manual flow encoded as fixtures: admin creates the account once, then the whole requester test file logs in as that account and exercises its dashboard.
+```
 
-Markers for role-based execution
+This encodes the manual flow as reusable fixtures: admin creates the account
+once, then the role-specific suite logs in with that account and exercises its
+dashboard.
 
+## Markers for Role-Based Execution
+
+```ini
 # pytest.ini
 [pytest]
 markers =
@@ -168,10 +191,21 @@ markers =
     supervisor: supervisor role tests
     smoke: fast critical-path checks
     e2e: full cross-role workflow tests
-Tag each test file's tests accordingly (pytestmark = pytest.mark.admin), so CI can run -m "admin and smoke" on every PR and reserve -m e2e for nightly, since cross-role flows are the slowest and most brittle.
+```
 
-Phased rollout given where you are today
-Now: finish tests/admin/ — processing area tabs, execution source config creation, settings. This is your critical path since every other role depends on admin working.
-Next: tests/requester, tests/dispatcher, tests/supervisor — each gets its own dashboard page objects (you've already stubbed them) and a conftest that seeds its account via the admin fixtures above.
-Last: tests/e2e/ — one or two true end-to-end tests that walk the full chain (admin creates processing area + requester device → requester logs in and sees it → dispatcher acts on it → supervisor observes the result). Keep these few; they're expensive and mainly there to catch integration breaks the isolated role suites miss.
-One thing worth deciding before you build further: do you have (or can the dev team expose) any API endpoints for creating processing areas / requester-dispatcher-supervisor accounts? If yes, use utils/api_client.py for test setup and reserve the UI exclusively for the actual test assertions — that alone often cuts suite runtime by more than half in admin-heavy apps like this. If there's no API, the UI-based fixture chain above is the right fallback.
+Tag each test file's tests accordingly, for example
+`pytestmark = pytest.mark.admin`, so CI can select focused suites such as
+`-m "admin and smoke"` and reserve cross-role E2E flows for slower jobs.
+
+## Phased Rollout
+
+1. Finish the admin coverage first: processing area tabs, execution source
+   configuration, and settings.
+2. Add requester, dispatcher, and supervisor suites with their own page objects
+   and role-seeding fixtures.
+3. Keep E2E tests focused on one or two complete cross-role workflows, because
+   they are slower and more sensitive to environment state.
+
+When setup APIs exist, prefer them for creating processing areas and role
+accounts. Keep UI interactions for the behavior under test. If setup APIs are
+not available, session-scoped UI fixtures are the fallback.
