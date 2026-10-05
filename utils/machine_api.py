@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import requests
 
+from config.data import TestData
 from config.environment import ROOT_DIR, config
 
 BASE = '/mts/processing-area-machines/'
@@ -34,7 +35,7 @@ def assert_machine(data, expected=None):
     assert type(data[ID]) is int and data[ID] > 0, data
     assert type(data['processing_area_id']) is int, data
     assert isinstance(data['machine_name'], str), data
-    assert data['point_type'] in ('production_type', 'consumption_type'), data
+    assert data['point_type'] in (TestData.crud_api_production_point_type, TestData.crud_api_consumption_point_type), data
     for field, value in (expected or {}).items():
         assert data[field] == value, f'{field}: expected {value!r}, got {data[field]!r}'
     return data
@@ -67,8 +68,8 @@ class MachineAPI:
         return response
 
     def area(self):
-        payload = dict(processing_area_name=f'AUTO_PAM_{uuid4().hex[:12]}',
-                       processing_area_description='Temporary automated API/UI test')
+        payload = dict(processing_area_name=f'{TestData.crud_api_area_name_prefix}_{uuid4().hex[:12]}',
+                       processing_area_description=TestData.crud_api_area_description)
         data = check(self.request('POST', AREA_BASE, json=payload), 201).json()
         self.areas.append(data['id'])
         assert all(data[k] == v for k, v in payload.items()), data
@@ -77,8 +78,8 @@ class MachineAPI:
     def payload(self, area_id=None, **changes):
         if area_id is None:
             area_id = self.areas[0] if self.areas else self.area()['id']
-        data = dict(processing_area_id=area_id, machine_name=f'AUTO_MACHINE_{uuid4().hex[:12]}',
-                    point_type='production_type')
+        data = dict(processing_area_id=area_id, machine_name=f'{TestData.crud_api_machine_name_prefix}_{uuid4().hex[:12]}',
+                    point_type=TestData.crud_api_default_point_type)
         data.update(changes)
         return data
 

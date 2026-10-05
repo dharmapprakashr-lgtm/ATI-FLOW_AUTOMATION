@@ -1,4 +1,4 @@
-"""Container tests — Baseline Setup · Existence · Validation · Type Dropdown · CRUD · Bulk Upload.
+"""Container tests — Baseline Setup · Existence · Validation · Type Dropdown · Bulk Upload.
 
 ALL container-related test cases for the Processing Area live here.
 This file seeds the baseline container immediately after the baseline material
@@ -10,7 +10,6 @@ container definition to work with.
   TC_CON_002   Container numeric fields reject invalid values (negative, zero, text, empty)
   TC_CON_002b  Empty Add Container form is rejected
   TC_CON_003   Container Type dropdown lists all expected types (Trolley, Pallet, Bin)
-  TC_CON_CRUD  Full lifecycle — create → verify → edit → verify → delete
   TC_CON_BULK  Bulk upload via CSV — template header + every row lands in the table
   TC_CON_BULK_BAD  Malformed CSV is rejected without an HTTP 500
 """
@@ -301,78 +300,6 @@ class TestContainerTypeDropdown:
             admin_page.wait_for_timeout(300)
             admin_page.keyboard.press("Escape")
             admin_page.wait_for_timeout(500)
-
-
-# =============================================================================
-# TC_CON_CRUD — Full lifecycle
-# =============================================================================
-
-@allure.feature("Admin Console")
-@allure.story("Container: CRUD lifecycle")
-class TestContainerCRUD:
-    """TC_CON_CRUD — create → verify → edit → verify → delete."""
-
-    @allure.title("TC_CON_CRUD — Container full CRUD lifecycle in one pass")
-    def test_container_crud_lifecycle(self, admin_page, processing_area):
-        """
-        ID     : TC_CON_CRUD
-        Title  : Container create → search → edit → delete lifecycle
-        Reason : Validates every write path for containers in a single session
-                 so a regression in any step is caught without running the full suite.
-        """
-        dashboard       = AdminDashboardPage(admin_page)
-        crud_sub_type   = unique_name("ctr_crud")
-        edited_sub_type = unique_name("ctr_crud_ed")
-
-        processing_area.go_to_containers()
-
-        # ── CREATE ────────────────────────────────────────────────────────────
-        with allure.step(f"Create container sub-type '{crud_sub_type}'"):
-            dashboard.delete_device_if_exists(crud_sub_type)
-            dashboard.add_container(
-                TestData.crud_container_type,
-                crud_sub_type,
-                TestData.crud_container_length,
-                TestData.crud_container_width,
-                TestData.crud_container_height,
-                TestData.crud_container_hitch_length,
-                TestData.crud_container_qty,
-            )
-
-        with allure.step(f"Verify '{crud_sub_type}' appears in the Containers table"):
-            dashboard.verify_device_created(crud_sub_type)
-
-        # ── EDIT ──────────────────────────────────────────────────────────────
-        with allure.step(f"Edit sub-type: '{crud_sub_type}' → '{edited_sub_type}'"):
-            search_input = dashboard._search_for(crud_sub_type)
-            row = dashboard._row_by_exact_name(crud_sub_type)
-            if row.count() > 0:
-                row.first.locator("button").first.click(force=True)
-                admin_page.wait_for_timeout(1_000)
-                admin_page.locator("#ctr-sub-type").fill(edited_sub_type)
-                admin_page.locator(".MuiDialog-container").get_by_role(
-                    "button", name="SAVE", exact=True
-                ).click()
-                admin_page.wait_for_timeout(2_000)
-            dashboard._clear_search(search_input)
-
-        with allure.step(f"Verify edited sub-type '{edited_sub_type}' is in the table"):
-            dashboard.verify_device_created(edited_sub_type)
-
-        # ── DELETE ────────────────────────────────────────────────────────────
-        with allure.step(f"Delete '{edited_sub_type}'"):
-            deleted = dashboard.delete_device_if_exists(edited_sub_type)
-            assert deleted, (
-                f"Expected to delete container '{edited_sub_type}' but it was not found."
-            )
-
-        with allure.step(f"Confirm '{edited_sub_type}' is gone from the table"):
-            si    = dashboard._search_for(edited_sub_type)
-            count = dashboard._row_by_exact_name(edited_sub_type).count()
-            dashboard._clear_search(si)
-            assert count == 0, (
-                f"Container '{edited_sub_type}' still visible in the table after deletion."
-            )
 
 
 # =============================================================================

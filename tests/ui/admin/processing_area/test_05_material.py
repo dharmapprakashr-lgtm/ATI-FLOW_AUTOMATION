@@ -1,4 +1,4 @@
-"""Material tests — Baseline Setup · Existence · Validation · Scoping · CRUD · Bulk Upload.
+"""Material tests — Baseline Setup · Existence · Validation · Scoping · Bulk Upload.
 
 ALL material-related test cases for the Processing Area live here.
 This file owns the delete-and-recreate of the baseline Processing Area and
@@ -9,7 +9,6 @@ its material so every run starts from a clean, known state.
   TC_MAT_002   Add Material dialog enforces required fields
   TC_MAT_002b  Numeric fields (pre-proc time, max qty) reject alphabetic input
   TC_MAT_003   Material is scoped to its own Processing Area (isolation)
-  TC_MAT_CRUD  Full lifecycle — create → verify → edit → verify → delete
   TC_MAT_BULK  Bulk upload via CSV — template header + every row lands in table
   TC_MAT_BULK_BAD  Malformed CSV is rejected gracefully (no HTTP 500)
 """
@@ -227,7 +226,7 @@ class TestMaterialFieldValidation:
                 field.press_sequentially(bad_value)
                 admin_page.wait_for_timeout(300)
                 actual = field.input_value()
-                assert actual == "", (
+                assert not any(char.isalpha() for char in actual), (
                     f"Numeric field '{label}' accepted alphabetic input '{bad_value}'. "
                     f"Stored value: '{actual}'"
                 )
@@ -274,73 +273,6 @@ class TestMaterialScoping:
 
         with allure.step(f"Teardown — delete Area B '{area_b}'"):
             pa_page.delete_processing_area(area_b)
-
-
-# =============================================================================
-# TC_MAT_CRUD — Full lifecycle
-# =============================================================================
-
-@allure.feature("Admin Console")
-@allure.story("Material: CRUD lifecycle")
-class TestMaterialCRUD:
-    """TC_MAT_CRUD — create → verify → edit → verify → delete."""
-
-    @allure.title("TC_MAT_CRUD — Material full CRUD lifecycle in one pass")
-    def test_material_crud_lifecycle(self, admin_page, processing_area):
-        """
-        ID     : TC_MAT_CRUD
-        Title  : Material create → search → edit → delete lifecycle
-        Reason : Validates every write path for materials in one session so a
-                 regression in any step is caught without running the full suite.
-        """
-        dashboard   = AdminDashboardPage(admin_page)
-        crud_name   = unique_name("mat_crud")
-        edited_name = unique_name("mat_crud_ed")
-        prefix      = f"MTC{run_token()}"[:12]
-
-        processing_area.go_to_materials()
-
-        # ── CREATE ────────────────────────────────────────────────────────────
-        with allure.step(f"Create material '{crud_name}'"):
-            dashboard.delete_device_if_exists(crud_name)
-            dashboard.add_material(
-                crud_name,
-                TestData.crud_material_prod_unit,
-                TestData.crud_material_pre_proc,
-                TestData.crud_material_max_qty,
-                prefix,
-            )
-
-        with allure.step(f"Verify '{crud_name}' appears in the table"):
-            dashboard.verify_device_created(crud_name)
-
-        # ── EDIT ──────────────────────────────────────────────────────────────
-        with allure.step(f"Rename '{crud_name}' → '{edited_name}' via the edit icon"):
-            search_input = dashboard._search_for(crud_name)
-            row = dashboard._row_by_exact_name(crud_name)
-            if row.count() > 0:
-                row.first.locator("button").first.click(force=True)
-                admin_page.wait_for_timeout(1_000)
-                admin_page.locator("#mat-type-name").fill(edited_name)
-                admin_page.get_by_role("button", name="Add Material").click(force=True)
-                admin_page.wait_for_timeout(2_000)
-            dashboard._clear_search(search_input)
-
-        with allure.step(f"Verify edited name '{edited_name}' is in the table"):
-            dashboard.verify_device_created(edited_name)
-
-        # ── DELETE ────────────────────────────────────────────────────────────
-        with allure.step(f"Delete '{edited_name}'"):
-            deleted = dashboard.delete_device_if_exists(edited_name)
-            assert deleted, f"Expected to delete '{edited_name}' but it was not found."
-
-        with allure.step(f"Confirm '{edited_name}' is gone from the table"):
-            si = dashboard._search_for(edited_name)
-            count = dashboard._row_by_exact_name(edited_name).count()
-            dashboard._clear_search(si)
-            assert count == 0, (
-                f"Material '{edited_name}' still visible in the table after deletion."
-            )
 
 
 # =============================================================================

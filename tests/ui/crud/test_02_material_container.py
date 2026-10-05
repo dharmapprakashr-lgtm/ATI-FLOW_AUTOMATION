@@ -1,20 +1,32 @@
-"""Material and Container CRUD lifecycle tests — Part 3b (CRUD).
+"""Material and Container CRUD lifecycle tests.
 
 Uses dedicated throwaway records from [material_crud] and [container_crud]
-in test_data.toml — never touches the shared baseline records.
+in test_data.toml and never touches the shared baseline records.
 
-TC_MAT_CRUD  Material create → verify → delete lifecycle
-TC_CON_CRUD  Container create → verify → delete lifecycle
+TC_MAT_CRUD  Material create -> verify -> edit -> verify -> delete lifecycle
+TC_CON_CRUD  Container create -> verify -> edit -> verify -> delete lifecycle
 """
+
+import re
 
 import allure
 import pytest
-from playwright.sync_api import expect
 
 from config.data import TestData
 from pages.admin.admin_navigation import AdminDashboardPage
 
 pytestmark = [pytest.mark.admin, pytest.mark.admin_pa, pytest.mark.crud]
+
+
+def _submit_dialog(page, *labels):
+    dialog = page.locator(".MuiDialog-container")
+    pattern = re.compile(rf"^({'|'.join(re.escape(label) for label in labels)})$", re.I)
+    named_button = dialog.get_by_role("button", name=pattern)
+    if named_button.count():
+        named_button.last.click(force=True)
+    else:
+        dialog.locator(".MuiDialogActions-root button").last.click(force=True)
+    page.wait_for_timeout(2_000)
 
 
 # =============================================================================
@@ -24,49 +36,59 @@ pytestmark = [pytest.mark.admin, pytest.mark.admin_pa, pytest.mark.crud]
 @allure.feature("Admin Console")
 @allure.story("Processing Area: material CRUD lifecycle")
 class TestMaterialCrud:
-    """TC_MAT_CRUD"""
+    """TC_MAT_CRUD - create -> verify -> edit -> verify -> delete."""
 
-    @allure.title("TC_MAT_CRUD — Material create and delete lifecycle")
-    def test_material_create_and_delete(self, admin_page, processing_area, safe_step):
+    @allure.title("TC_MAT_CRUD - Material full CRUD lifecycle in one pass")
+    def test_material_crud_lifecycle(self, admin_page, processing_area):
         """
         ID     : TC_MAT_CRUD
-        Title  : Material create → verify → delete lifecycle
-        Reason : Confirms the full lifecycle works end-to-end using a dedicated
-                 throwaway record from [material_crud] in test_data.toml.
-                 The shared baseline material (testing_material_45) is never touched.
+        Title  : Material create -> search -> edit -> delete lifecycle
+        Reason : Validates every write path for materials in one session so a
+                 regression in any step is caught without running the full suite.
         """
         dashboard = AdminDashboardPage(admin_page)
-        name        = TestData.crud_material_name
-        prod_unit   = TestData.crud_material_prod_unit
-        pre_proc    = TestData.crud_material_pre_proc
-        max_qty     = TestData.crud_material_max_qty
-        prefix      = TestData.crud_material_prefix
+        crud_name = TestData.crud_material_name
+        edited_name = TestData.crud_material_name_edited
+        prefix = TestData.crud_material_prefix
 
-        safe_step("Open Materials tab", processing_area.go_to_materials)
+        processing_area.go_to_materials()
 
-        def create():
-            dashboard.delete_device_if_exists(name)
-            dashboard.add_material(name, prod_unit, pre_proc, max_qty, prefix)
-            expect(
-                admin_page.locator("tr").filter(has_text=name).first
-            ).to_be_visible(timeout=5000)
-        safe_step(f"Create material '{name}'", create)
+        with allure.step(f"Create material '{crud_name}'"):
+            dashboard.delete_device_if_exists(edited_name)
+            dashboard.delete_device_if_exists(crud_name)
+            dashboard.add_material(
+                crud_name,
+                TestData.crud_material_prod_unit,
+                TestData.crud_material_pre_proc,
+                TestData.crud_material_max_qty,
+                prefix,
+            )
 
-        def verify_exists():
-            expect(
-                admin_page.locator("tr").filter(has_text=name).first
-            ).to_be_visible(timeout=5000)
-        safe_step(f"Verify material '{name}' is present in the table", verify_exists)
+        with allure.step(f"Verify '{crud_name}' appears in the table"):
+            dashboard.verify_device_created(crud_name)
 
-        def delete_it():
-            result = dashboard.delete_device_if_exists(name)
-            assert result, f"Expected to delete '{name}' but it was not found."
-            expect(
-                admin_page.locator("tr").filter(has_text=name).first
-            ).not_to_be_visible(timeout=5000)
-        safe_step(f"Delete material '{name}'", delete_it)
+        with allure.step(f"Rename '{crud_name}' to '{edited_name}' via the edit icon"):
+            search_input = dashboard._search_for(crud_name)
+            row = dashboard._row_by_exact_name(crud_name)
+            assert row.count() > 0, f"Material '{crud_name}' was not found for edit."
+            row.first.locator("button").first.click(force=True)
+            admin_page.wait_for_timeout(1_000)
+            admin_page.locator("#mat-type-name").fill(edited_name)
+            _submit_dialog(admin_page, "Add Material", "Update Material", "Save", "SAVE")
+            dashboard._clear_search(search_input)
 
-        safe_step.assert_no_failures()
+        with allure.step(f"Verify edited name '{edited_name}' is in the table"):
+            dashboard.verify_device_created(edited_name)
+
+        with allure.step(f"Delete '{edited_name}'"):
+            deleted = dashboard.delete_device_if_exists(edited_name)
+            assert deleted, f"Expected to delete '{edited_name}' but it was not found."
+
+        with allure.step(f"Confirm '{edited_name}' is gone from the table"):
+            search_input = dashboard._search_for(edited_name)
+            count = dashboard._row_by_exact_name(edited_name).count()
+            dashboard._clear_search(search_input)
+            assert count == 0, f"Material '{edited_name}' still visible after deletion."
 
 
 # =============================================================================
@@ -76,48 +98,57 @@ class TestMaterialCrud:
 @allure.feature("Admin Console")
 @allure.story("Processing Area: container CRUD lifecycle")
 class TestContainerCrud:
-    """TC_CON_CRUD"""
+    """TC_CON_CRUD - create -> verify -> edit -> verify -> delete."""
 
-    @allure.title("TC_CON_CRUD — Container create and delete lifecycle")
-    def test_container_create_and_delete(self, admin_page, processing_area, safe_step):
+    @allure.title("TC_CON_CRUD - Container full CRUD lifecycle in one pass")
+    def test_container_crud_lifecycle(self, admin_page, processing_area):
         """
         ID     : TC_CON_CRUD
-        Title  : Container create → verify → delete lifecycle
-        Reason : Confirms the full lifecycle works end-to-end using a dedicated
-                 throwaway record from [container_crud] in test_data.toml.
-                 The shared baseline container (mini trolly) is never touched.
+        Title  : Container create -> search -> edit -> delete lifecycle
+        Reason : Validates every write path for containers in one session so a
+                 regression in any step is caught without running the full suite.
         """
-        dashboard   = AdminDashboardPage(admin_page)
-        ctr_type    = TestData.crud_container_type
-        sub_type    = TestData.crud_container_sub_type
-        length      = TestData.crud_container_length
-        width       = TestData.crud_container_width
-        height      = TestData.crud_container_height
-        hitch       = TestData.crud_container_hitch_length
-        qty         = TestData.crud_container_qty
+        dashboard = AdminDashboardPage(admin_page)
+        crud_sub_type = TestData.crud_container_sub_type
+        edited_sub_type = TestData.crud_container_sub_type_ed
 
-        safe_step("Open Containers tab", processing_area.go_to_containers)
+        processing_area.go_to_containers()
 
-        def create():
-            dashboard.delete_device_if_exists(sub_type)
-            dashboard.add_container(ctr_type, sub_type, length, width, height, hitch, qty)
-            expect(
-                admin_page.locator("tr").filter(has_text=sub_type).first
-            ).to_be_visible(timeout=5000)
-        safe_step(f"Create container '{sub_type}'", create)
+        with allure.step(f"Create container sub-type '{crud_sub_type}'"):
+            dashboard.delete_device_if_exists(edited_sub_type)
+            dashboard.delete_device_if_exists(crud_sub_type)
+            dashboard.add_container(
+                TestData.crud_container_type,
+                crud_sub_type,
+                TestData.crud_container_length,
+                TestData.crud_container_width,
+                TestData.crud_container_height,
+                TestData.crud_container_hitch_length,
+                TestData.crud_container_qty,
+            )
 
-        def verify_exists():
-            expect(
-                admin_page.locator("tr").filter(has_text=sub_type).first
-            ).to_be_visible(timeout=5000)
-        safe_step(f"Verify container '{sub_type}' is present in the table", verify_exists)
+        with allure.step(f"Verify '{crud_sub_type}' appears in the Containers table"):
+            dashboard.verify_device_created(crud_sub_type)
 
-        def delete_it():
-            result = dashboard.delete_device_if_exists(sub_type)
-            assert result, f"Expected to delete '{sub_type}' but it was not found."
-            expect(
-                admin_page.locator("tr").filter(has_text=sub_type).first
-            ).not_to_be_visible(timeout=5000)
-        safe_step(f"Delete container '{sub_type}'", delete_it)
+        with allure.step(f"Edit sub-type: '{crud_sub_type}' to '{edited_sub_type}'"):
+            search_input = dashboard._search_for(crud_sub_type)
+            row = dashboard._row_by_exact_name(crud_sub_type)
+            assert row.count() > 0, f"Container '{crud_sub_type}' was not found for edit."
+            row.first.locator("button").first.click(force=True)
+            admin_page.wait_for_timeout(1_000)
+            admin_page.locator("#ctr-sub-type").fill(edited_sub_type)
+            _submit_dialog(admin_page, "SAVE", "Save", "Update Container", "Add Container")
+            dashboard._clear_search(search_input)
 
-        safe_step.assert_no_failures()
+        with allure.step(f"Verify edited sub-type '{edited_sub_type}' is in the table"):
+            dashboard.verify_device_created(edited_sub_type)
+
+        with allure.step(f"Delete '{edited_sub_type}'"):
+            deleted = dashboard.delete_device_if_exists(edited_sub_type)
+            assert deleted, f"Expected to delete container '{edited_sub_type}' but it was not found."
+
+        with allure.step(f"Confirm '{edited_sub_type}' is gone from the table"):
+            search_input = dashboard._search_for(edited_sub_type)
+            count = dashboard._row_by_exact_name(edited_sub_type).count()
+            dashboard._clear_search(search_input)
+            assert count == 0, f"Container '{edited_sub_type}' still visible after deletion."

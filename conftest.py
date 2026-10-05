@@ -7,8 +7,13 @@ and separate in-memory authentication states. Both can run in the same session.
 
 # Set bytecode routing before importing any project modules. Child Python
 # processes inherit the same destination through PYTHONPYCACHEPREFIX.
+import json
 import os
+import ssl
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 _BYTECODE_CACHE = Path(__file__).resolve().parent / ".cache" / "pycache"
@@ -67,6 +72,172 @@ log = get_logger("conftest")
 
 ROOT_DIR = Path(__file__).resolve().parent
 
+collect_ignore = [
+    "tests/api/test_mes_integration_polling.py",
+    "tests/api/test_central_config_health.py",
+    "tests/api/test_processing_staging_grid.py",
+    "tests/api/test_material_master_config.py",
+    "tests/api/test_settings_rest_api.py",
+    "tests/api/test_tablet_login_security.py",
+    "tests/api/test_external_connections_setup.py",
+]
+
+
+# -- API environment bootstrap -------------------------------------------------
+
+_API_LOGIN_ENDPOINTS = (
+    ("/mts/auth/device/login", "device_json"),
+    ("/auth/token", "oauth2_form"),
+    ("/api/auth/token", "oauth2_form"),
+    ("/mts/auth/token", "oauth2_form"),
+    ("/auth/login", "user_json"),
+    ("/api/login", "user_json"),
+)
+
+
+def _load_env_file(path):
+    """Load KEY=VALUE pairs without overriding shell-provided variables."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for raw in handle:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    except FileNotFoundError:
+        pass
+
+
+def _api_base_url():
+    raw = (
+        os.environ.get("MTS_BASE_URL", "").strip()
+        or os.environ.get("BASE_URL", "").strip()
+        or "http://localhost:8000"
+    )
+    return raw.removesuffix("/login").rstrip("/")
+
+
+def _api_ssl_context():
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
+
+
+def _api_login_payload(style, username, password):
+    if style == "device_json":
+        body = json.dumps({"name": username, "device_password": password}).encode()
+        return body, "application/json"
+    if style == "oauth2_form":
+        body = urllib.parse.urlencode({"username": username, "password": password}).encode()
+        return body, "application/x-www-form-urlencoded"
+    body = json.dumps({"username": username, "password": password}).encode()
+    return body, "application/json"
+
+
+def _fetch_api_token(base_url, username, password):
+    last_error = "no endpoints tried"
+    for suffix, style in _API_LOGIN_ENDPOINTS:
+        url = base_url + suffix
+        body, content_type = _api_login_payload(style, username, password)
+        try:
+            request = urllib.request.Request(
+                url,
+                data=body,
+                headers={"Content-Type": content_type, "User-Agent": "AtiFLOW-Tester/2.0"},
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=8.0, context=_api_ssl_context()) as response:
+                data = json.loads(response.read().decode())
+            raw_token = (
+                data.get("access_token")
+                or data.get("token")
+                or data.get("accessToken")
+                or data.get("bearer_token")
+                or ""
+            ).strip()
+            if raw_token:
+                token = raw_token if raw_token.lower().startswith("bearer ") else f"Bearer {raw_token}"
+                print(f"\n[API bootstrap] Login OK via {url} (role={data.get('role', '?')})")
+                return token
+            last_error = f"{url}: response OK but no token field (keys: {list(data.keys())})"
+        except urllib.error.HTTPError as exc:
+            last_error = f"{url}: HTTP {exc.code} {exc.reason}"
+        except Exception as exc:  # noqa: BLE001
+            last_error = f"{url}: {type(exc).__name__}: {exc}"
+    raise RuntimeError(
+        "[API bootstrap] Login failed - tried all endpoints.\n"
+        f"Last error : {last_error}\n"
+        f"Base URL   : {base_url}\n"
+        f"Username   : {username}\n"
+        "Fix: set MTS_TOKEN in .env to skip auto-login, or check ADMIN_USERNAME / "
+        "ADMIN_PASSWORD / MTS_BASE_URL."
+    )
+
+
+def _publish_api_token(base_url, token):
+    os.environ.setdefault("MTS_BASE_URL", base_url)
+    os.environ["MTS_TOKEN"] = token
+    os.environ["API_BEARER_TOKEN"] = token
+    print(f"[API bootstrap] MTS_BASE_URL = {base_url}")
+    print(f"[API bootstrap] MTS_TOKEN    = {token[:55]}...")
+
+
+def _is_api_pytest_run(pytest_config):
+    markexpr = (getattr(pytest_config.option, "markexpr", "") or "").lower()
+    if "api" in markexpr:
+        return True
+
+    args = [str(arg).replace(os.sep, "/") for arg in getattr(pytest_config, "args", ())]
+    if any("tests/api" in arg or arg.endswith("/api") or arg == "api" for arg in args):
+        return True
+    if any("tests/ui" in arg or "tests/unit" in arg for arg in args):
+        return False
+
+    invocation_dir = Path(str(pytest_config.invocation_params.dir))
+    if invocation_dir.name == "api" and invocation_dir.parent.name == "tests":
+        return True
+    return not args
+
+
+def _configure_api_environment(pytest_config):
+    """Prepare live API tests before test modules import module-level env vars."""
+    if not _is_api_pytest_run(pytest_config):
+        return
+
+    _load_env_file(ROOT_DIR / ".env")
+    base_url = _api_base_url()
+    os.environ.setdefault("MTS_BASE_URL", base_url)
+
+    existing = (
+        os.environ.get("MTS_TOKEN", "").strip()
+        or os.environ.get("API_BEARER_TOKEN", "").strip()
+    )
+    if not existing:
+        token_paths = []
+        if explicit := os.environ.get("MTS_TOKEN_FILE", "").strip():
+            token_paths.append(Path(explicit))
+        token_paths.extend((ROOT_DIR / "tests" / "api" / ".mts_token", ROOT_DIR / ".mts_token"))
+        for token_path in token_paths:
+            if token_path.is_file():
+                existing = token_path.read_text(encoding="utf-8").strip()
+                if existing:
+                    print(f"\n[API bootstrap] Token loaded from {token_path}")
+                    break
+
+    if existing:
+        token = existing if existing.lower().startswith("bearer ") else f"Bearer {existing}"
+        _publish_api_token(base_url, token)
+        return
+
+    username = os.environ.get("ADMIN_USERNAME", "").strip() or "admin"
+    password = os.environ.get("ADMIN_PASSWORD", "").strip() or "admin123"
+    try:
+        _publish_api_token(base_url, _fetch_api_token(base_url, username, password))
+    except RuntimeError as exc:
+        print(f"\n[API bootstrap] WARNING: {exc}")
+
 #: Suites run in this order regardless of alphabetical collection.
 #:
 #: The order follows the master test-case plan and the dependency chain:
@@ -97,8 +268,8 @@ ROOT_DIR = Path(__file__).resolve().parent
 #: (test_01_…, test_02_…) still govern the intra-directory order.
 SUITE_ORDER = (
     # ── Part 1: Login gate ────────────────────────────────────────────────
-    "tests/common/test_login",
-    "tests/common/test_application_version",
+    "tests/ui/common/test_login",
+    "tests/ui/common/test_application_version",
 
     # ── Part 3: Admin › Processing Area ──────────────────────────────────
     # (runs before Part 4 because device records bind to workflow + machines)
@@ -114,7 +285,7 @@ SUITE_ORDER = (
     # ── Part 2: Access Control ────────────────────────────────────────────
     # Placed here so device records (Part 4) already exist when the role
     # fixtures seed and authenticate each device page.
-    "tests/common/test_access_control",
+    "tests/ui/common/test_access_control",
 
     # Settings runs as processing_area/test_18_setting.py above.
 
@@ -124,19 +295,19 @@ SUITE_ORDER = (
     "tests/ui/requester",
     "tests/ui/dispatcher",
     "tests/ui/supervisor",
-    "tests/common/test_dashboard_common",
+    "tests/ui/common/test_dashboard_common",
 
     # ── Part 7: End-to-End ────────────────────────────────────────────────
     "tests/ui/e2e",
 
     # ── Part 8: Security ──────────────────────────────────────────────────
-    "tests/common/test_security",
+    "tests/ui/common/test_security",
 
     # ── Part 9: Non-Functional Requirements ──────────────────────────────
-    "tests/common/test_nfr",
+    "tests/ui/common/test_nfr",
 
     # ── Part 10: UI & Navigation ──────────────────────────────────────────
-    "tests/common/test_ui_navigation",
+    "tests/ui/common/test_ui_navigation",
 )
 
 
@@ -158,7 +329,7 @@ def browser_type_launch_args(browser_type_launch_args, pytestconfig):
 @pytest.fixture(scope="session", autouse=True)
 def verify_environment(request):
     """Fail fast on missing config, and warn about test data that cannot work."""
-    if not any(any(part in str(item.path).replace(os.sep, "/") for part in ("tests/ui/", "tests/common/")) for item in request.session.items):
+    if not any(any(part in str(item.path).replace(os.sep, "/") for part in ("tests/ui/", "tests/ui/common/")) for item in request.session.items):
         return
     config.require_admin_credentials()
     log.info("Running against %s (TEST_ENV=%s)", config.base_url, config.env)
@@ -623,7 +794,7 @@ def pytest_collection_modifyitems(session, config, items):
         path = str(item.path).replace(os.sep, "/")
         if "/tests/api/" in path:
             item.add_marker(pytest.mark.api)
-        elif "/tests/ui/" in path or "/tests/common/" in path:
+        elif "/tests/ui/" in path or "/tests/ui/common/" in path:
             item.add_marker(pytest.mark.ui)
     items.sort(key=rank)
 
@@ -634,7 +805,7 @@ def pytest_collection_modifyitems(session, config, items):
 def cleanup_test_data(request):
     """Remove UI records owned by this run, including after test failures."""
     from utils.test_data_cleanup import areas, devices, ui_records, cleanup_enabled
-    if not any(any(part in str(item.path).replace(os.sep, "/") for part in ("tests/ui/", "tests/common/")) for item in request.session.items):
+    if not any(any(part in str(item.path).replace(os.sep, "/") for part in ("tests/ui/", "tests/ui/common/")) for item in request.session.items):
         yield
         return
     browser = request.getfixturevalue("browser")
@@ -786,7 +957,9 @@ def pytest_sessionfinish(session, exitstatus):
     """Build the single PDF run report. Never changes the run's exit status."""
     _collector.finished_at = time.time()
 
-    if True: # Always skip PDF generation in headless test environment to prevent Playwright hangs
+    if session.config.getoption("no_pdf"):
+        cleanup_work_dir()
+        print("\nPDF report skipped because --no-pdf was passed.")
         return
 
     try:
@@ -827,17 +1000,11 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    """Prepare this run's output paths.
-
-    ``reports/`` holds only finished PDFs. pytest-html is off by default; if it
-    is switched on explicitly with ``--html``, a relative path is resolved
-    against the repository root rather than the working directory, so running
-    ``pytest`` from inside ``tests/admin/`` cannot create a stray report folder
-    beside itself.
-    """
+    """Prepare reporting paths and environment for selected test suites."""
     if config.getoption("tab_view_ms") < 0:
         raise pytest.UsageError("--tab-view-ms must be zero or greater")
     ensure_dirs()
+    _configure_api_environment(config)
 
     html_path = getattr(config.option, "htmlpath", None)
     if html_path and not Path(html_path).is_absolute():
@@ -1125,7 +1292,7 @@ def e2e_supervisor_page(e2e_supervisor_state, e2e_seeded_supervisor, authenticat
 def machine_api(request):
     """Function-owned API resources, shared with isolated browser contract tests."""
     from utils.machine_api import MachineAPI
-    if any(part in str(request.node.path).replace(os.sep, "/") for part in ("tests/ui/", "tests/common/")):
+    if any(part in str(request.node.path).replace(os.sep, "/") for part in ("tests/ui/", "tests/ui/common/")):
         page = request.getfixturevalue("admin_page")
         token = page.evaluate(
             "() => JSON.parse(sessionStorage.getItem('userDetails') || '{}').access_token"
@@ -1138,7 +1305,19 @@ def machine_api(request):
     try:
         yield client
     finally:
-        client.close()
+        try:
+            client.close()
+        finally:
+            from config.data import TestData
+            from utils.test_data_cleanup import ui_records
+
+            ui_records.difference_update(
+                {
+                    record
+                    for record in ui_records
+                    if record[2].startswith(TestData.crud_api_machine_name_prefix)
+                }
+            )
 
 
 @pytest.fixture

@@ -342,3 +342,13 @@ supervisor_id_prefix = "crud_SUP"
 absent_name_prefix = "crud_device_absent"
 password = "Crud@123456"
 updated_password = "CrudUpdated@123456"
+
+[machine_api_ui_crud]
+area_name_prefix = "AUTO_PAM"
+area_description = "Temporary automated API/UI test"
+machine_name_prefix = "AUTO_MACHINE"
+default_point_type = "production_type"
+production_point_type = "production_type"
+production_label = "Production Type"
+consumption_point_type = "consumption_type"
+consumption_label = "Consumption Type"

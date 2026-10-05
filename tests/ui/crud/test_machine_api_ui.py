@@ -2,6 +2,8 @@
 import re
 
 import pytest
+
+from config.data import TestData
 from playwright.sync_api import expect
 
 from pages.admin.admin_navigation import AdminDashboardPage
@@ -20,7 +22,8 @@ def refresh(page, area_page):
 
 
 @pytest.mark.parametrize('point_type,label', [
-    ('production_type', 'Production Type'), ('consumption_type', 'Consumption Type'),
+    (TestData.crud_api_production_point_type, TestData.crud_api_production_label),
+    (TestData.crud_api_consumption_point_type, TestData.crud_api_consumption_label),
 ])
 def test_ui_create_persists_in_api_and_after_reload(machine_api, machine_ui_area, admin_page, point_type, label):
     area_page, area = machine_ui_area
@@ -39,12 +42,12 @@ def test_api_create_update_delete_reflected_in_ui(machine_api, machine_ui_area, 
     machine = machine_api.create(machine_api.payload(area['id']))
     refresh(admin_page, area_page)
     expect(machine_row(admin_page, machine['machine_name'])).to_have_count(1)
-    payload = machine_api.payload(area['id'], point_type='consumption_type')
+    payload = machine_api.payload(area['id'], point_type=TestData.crud_api_consumption_point_type)
     assert_machine(check(machine_api.request('PUT', BASE + str(machine[ID]), json=payload)).json(), payload)
     refresh(admin_page, area_page)
     expect(machine_row(admin_page, machine['machine_name'])).to_have_count(0)
     expect(machine_row(admin_page, payload['machine_name'])).to_have_count(1)
-    expect(machine_row(admin_page, payload['machine_name'])).to_contain_text('Consumption Type')
+    expect(machine_row(admin_page, payload['machine_name'])).to_contain_text(TestData.crud_api_consumption_label)
     check(machine_api.request('DELETE', BASE + str(machine[ID])), (200, 204))
     refresh(admin_page, area_page)
     expect(machine_row(admin_page, payload['machine_name'])).to_have_count(0)
@@ -68,7 +71,7 @@ def test_cancel_creation_does_not_persist(machine_api, machine_ui_area, admin_pa
     admin_page.locator('button').filter(has_text='Add').first.click()
     admin_page.get_by_placeholder('e.g. Machine A').fill(payload['machine_name'])
     admin_page.locator('.MuiDialog-container .MuiSelect-select').first.click()
-    admin_page.get_by_role('option', name='Production Type', exact=True).click()
+    admin_page.get_by_role('option', name=TestData.crud_api_production_label, exact=True).click()
     admin_page.get_by_role('button', name=re.compile('^cancel$', re.IGNORECASE)).click()
     expect(admin_page.locator('.MuiDialog-container')).not_to_be_visible()
     assert machine_api.by_area(area['id']) == []

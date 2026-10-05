@@ -39,7 +39,7 @@ def api_session(headers=None):
 @pytest.fixture
 def auth_headers():
     # Re-read from os.environ at fixture-call time so the token injected by
-    # tests/api/conftest.py:pytest_configure() is always picked up, even
+    # root conftest.py:pytest_configure() is always picked up, even
     # though the module-level TOKEN variable was assigned at import time.
     token = (
         os.getenv("MTS_TOKEN")

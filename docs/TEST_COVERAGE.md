@@ -1048,7 +1048,7 @@ Covers cross-role configuration consistency and a requester → dispatch → Fle
 
 **Adapter:** [test_mts_automation.py](../tests/api/test_mts_automation.py)
 
-**Execution bridge:** [_legacy_mts.py](../tests/api/_legacy_mts.py)
+**Execution bridge:** built into [test_mts_automation.py](../tests/api/test_mts_automation.py)
 
 **Marker:** `api_model` · **Collected cases:** 182
 
@@ -1063,7 +1063,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 ### MTS135 — 38 cases
 
-**Source:** [run_mts135_automation_tests.py](../tests/api/run_mts135_automation_tests.py)
+**Source:** [test_mes_integration_polling.py](../tests/api/test_mes_integration_polling.py)
 
 | Case ID | Module | Scenario | Mode |
 | --- | --- | --- | --- |
@@ -1108,7 +1108,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 ### MTS136 — 48 cases
 
-**Source:** [run_mts136_automation_tests.py](../tests/api/run_mts136_automation_tests.py)
+**Source:** [test_central_config_health.py](../tests/api/test_central_config_health.py)
 
 | Case ID | Module | Scenario | Mode |
 | --- | --- | --- | --- |
@@ -1163,7 +1163,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 ### MTS146 — 20 cases
 
-**Source:** [run_mts146_automation_tests.py](../tests/api/run_mts146_automation_tests.py)
+**Source:** [test_processing_staging_grid.py](../tests/api/test_processing_staging_grid.py)
 
 | Case ID | Module | Scenario | Mode |
 | --- | --- | --- | --- |
@@ -1190,7 +1190,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 ### MTS147 — 27 cases
 
-**Source:** [run_mts147_automation_tests.py](../tests/api/run_mts147_automation_tests.py)
+**Source:** [test_material_master_config.py](../tests/api/test_material_master_config.py)
 
 | Case ID | Module | Scenario | Mode |
 | --- | --- | --- | --- |
@@ -1224,7 +1224,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 ### MTS155 — 11 cases
 
-**Source:** [run_mts155_automation_tests.py](../tests/api/run_mts155_automation_tests.py)
+**Source:** [test_settings_rest_api.py](../tests/api/test_settings_rest_api.py)
 
 | Case ID | Module | Scenario | Mode |
 | --- | --- | --- | --- |
@@ -1242,7 +1242,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 ### MTS162 — 13 cases
 
-**Source:** [run_mts162_automation_tests.py](../tests/api/run_mts162_automation_tests.py)
+**Source:** [test_tablet_login_security.py](../tests/api/test_tablet_login_security.py)
 
 | Case ID | Module | Scenario | Mode |
 | --- | --- | --- | --- |
@@ -1262,7 +1262,7 @@ names below describe the legacy checks' intent, not verified production behavior
 
 ### MTS167 — 25 cases
 
-**Source:** [run_mts167_automation_tests.py](../tests/api/run_mts167_automation_tests.py)
+**Source:** [test_external_connections_setup.py](../tests/api/test_external_connections_setup.py)
 
 | Case ID | Module | Scenario | Mode |
 | --- | --- | --- | --- |

@@ -43,6 +43,15 @@ class TestData:
     crud_dispatcher_id_prefix = _raw["devices_crud"]["dispatcher_id_prefix"]
     crud_supervisor_name_prefix = _raw["devices_crud"]["supervisor_name_prefix"]
     crud_supervisor_id_prefix = _raw["devices_crud"]["supervisor_id_prefix"]
+    _machine_api_ui_crud = _raw.get("machine_api_ui_crud", {})
+    crud_api_area_name_prefix = _machine_api_ui_crud.get("area_name_prefix", "AUTO_PAM")
+    crud_api_area_description = _machine_api_ui_crud.get("area_description", "Temporary automated API/UI test")
+    crud_api_machine_name_prefix = _machine_api_ui_crud.get("machine_name_prefix", "AUTO_MACHINE")
+    crud_api_default_point_type = _machine_api_ui_crud.get("default_point_type", "production_type")
+    crud_api_production_point_type = _machine_api_ui_crud.get("production_point_type", "production_type")
+    crud_api_production_label = _machine_api_ui_crud.get("production_label", "Production Type")
+    crud_api_consumption_point_type = _machine_api_ui_crud.get("consumption_point_type", "consumption_type")
+    crud_api_consumption_label = _machine_api_ui_crud.get("consumption_label", "Consumption Type")
 
     # Processing Area
     processing_area_name        = _raw["processing_area"]["name"]
